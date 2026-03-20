@@ -1,0 +1,178 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  PROVIDER
+  CUSTOMER
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  foto      String?
+  nome      String
+  email     String   @unique
+  senha     String
+  telefone  String   @unique
+  role      Role     @default(CUSTOMER)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  refreshTokens RefreshTokens[]
+  prestador     Prestador?
+  agendamentos  Agendamento[]
+  agendamentosCancelados  Agendamento[] @relation("cancelados")
+
+  @@map("usuarios")
+}
+
+model RefreshTokens {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  token     String
+  jti       String   @unique
+  revogado  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expireAt  DateTime
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, jti])
+  @@index([usuarioId])
+  @@map("refresh_tokens")
+}
+
+model Prestador {
+  id                  Int      @id @default(autoincrement())
+  usuarioId           Int      @unique
+  nomeEstabelecimento String   @unique
+  descricao           String
+  tipoServico         String
+  instagram           String?
+  emailComercial      String   @unique
+  telefoneComercial   String   @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  disponibilidades Disponibilidade[]
+  servicos         Servico[]
+  endereco         Endereco[]
+  agendamentos     Agendamento[]
+
+  @@index([nomeEstabelecimento])
+  @@map("prestadores")
+}
+
+model Disponibilidade {
+  id          Int      @id @default(autoincrement())
+  prestadorId Int
+  diaSemana   Int // 0:Domingo, 1:Segunda ... 6:Sabado
+  horaInicio  String // Exemplo: 08:43
+  horaFim     String
+  intervalo   Int // em minutos
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prestador Prestador @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+
+  @@unique([prestadorId, diaSemana])
+  @@map("disponibilidades")
+}
+
+model Servico {
+  id          Int      @id @default(autoincrement())
+  prestadorId Int
+  nome        String
+  descricao   String
+  duracao     String
+  preco       Decimal  @db.Decimal(10, 2)
+  ativo       Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prestador    Prestador     @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
+
+  @@unique([prestadorId, nome])
+  @@map("servicos")
+}
+
+model Endereco {
+  id          Int      @id @default(autoincrement())
+  prestadorId Int      @unique
+  estado      String
+  cidade      String
+  bairro      String
+  rua         String
+  numero      String
+  cep         String
+  referencia  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prestador    Prestador     @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
+
+  @@index([cep])
+  @@map("enderecos")
+}
+
+enum StatusAgendamento {
+  WAITING // ESPERANDO PRESTADOR CONFIRMAR
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED // REMARCADO
+  NO_SHOW // AGENDOU E NÃO COMPARECEU
+}
+
+model Agendamento {
+  id              Int               @id @default(autoincrement())
+  clienteId       Int
+  prestadorId     Int
+  servicoId       Int
+  enderecoId      Int
+  canceladoPorId  Int?
+  data            DateTime          @db.Date()
+  inicio          String // Exemplo: 08:30
+  fim             String
+  status          StatusAgendamento @default(WAITING)
+  createdAt       DateTime          @default(now())
+  canceladoAt     DateTime?
+  motivoCancelado String?
+
+  cliente   Usuario   @relation(fields: [clienteId], references: [id])
+  prestador Prestador @relation(fields: [prestadorId], references: [id])
+  servico   Servico   @relation(fields: [servicoId], references: [id])
+  endereco  Endereco  @relation(fields: [enderecoId], references: [id])
+
+  canceladoPor Usuario?  @relation("cancelados", fields: [canceladoPorId], references: [id], onDelete: Cascade)
+
+
+  @@map("agendamentos")
+}
+
+model Avaliacao {
+  id            Int      @id @default(autoincrement())
+  avaliadorId   Int
+  avaliadoId    Int
+  agendamentoId Int
+  nota          Decimal  @db.Decimal(2, 1)
+  comentario    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([avaliadorId, agendamentoId])
+  @@map("avaliacoes")
+}
