@@ -7,6 +7,7 @@ import rateLimit from "@fastify/rate-limit";
 
 import jwt from "@fastify/jwt";
 import { authPlugin } from "./plugins/auth";
+import { authRouters } from "./routers/auth/auth.routers";
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -67,6 +68,10 @@ async function startServer() {
             message: "Api executando"
         }
     });
+
+    fastify.register(authRouters, {
+        prefix:"api/v1/auth"
+    })
 
     await fastify.listen({
         port: 3000, host: "0.0.0.0"
