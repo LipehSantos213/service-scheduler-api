@@ -2,6 +2,13 @@ import { Type, Static } from "@sinclair/typebox";
 import { UserResponse } from "./user.schema";
 
 
+export const LoginBody = Type.Object({
+    email: Type.String({ format: "email" }),
+    password: Type.String(),
+});
+
+export type LoginType = Static<typeof LoginBody>;
+
 
 
 export const RegisterBody = Type.Object({
@@ -17,9 +24,9 @@ export const RegisterBody = Type.Object({
 
 export type RegisterBodyType = Static<typeof RegisterBody>;
 
-export const RegisterResponse = Type.Object({
-    accessToken:Type.String(),
+export const AuthResponseBody = Type.Object({
+    accessToken: Type.String(),
     // Front-End vai ser um Web-Site, então enviar o refresh token no HttpOnly(cooking)
-    refreshToken:Type.String(),
+    refreshToken: Type.String(),
     user: UserResponse,
-})
+});
