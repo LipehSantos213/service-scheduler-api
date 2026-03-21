@@ -1,7 +1,7 @@
 import { Prestador, RefreshTokens, Usuario } from "@prisma/client";
 import { prisma } from "../database/prisma";
 import { InternalServerError } from "../errors/http.errors";
-import { UserCreateType } from "../schemas/user.schema";
+import { UserCreateType, UserUpdateProfileType } from "../schemas/user.schema";
 
 
 
@@ -13,9 +13,12 @@ export class AuthRepository {
      * @param userId Id do Usuario
      * @returns Os dados do Usuario ou Null
      */
-    async getUserById(userId: number): Promise<Usuario | null> {
+    async getUserById(userId: number): Promise<{ prestador: Prestador | null } & Usuario | null> {
         return await prisma.usuario.findUnique({
-            where: { id: userId }
+            where: { id: userId },
+            include: {
+                prestador: true
+            }
         });
     }
 
@@ -24,9 +27,12 @@ export class AuthRepository {
      * @param email Email do Usuario (certifique-se que não ha espaços)
      * @returns Os Dados do Usuario ou Null
      */
-    async getUserByEmail(email: string): Promise<Usuario | null> {
+    async getUserByEmail(email: string): Promise<{ prestador: Prestador | null } & Usuario | null> {
         return await prisma.usuario.findFirst({
-            where: { email: email.trim() }
+            where: { email: email.trim() },
+            include: {
+                prestador: true
+            }
         });
     }
 
@@ -200,6 +206,66 @@ export class AuthRepository {
             console.log("[REPOSITORY] Não foi possivel revogar o token do usuario");
             console.log(`[ERROR] ${e}`);
             throw new InternalServerError("Error ao revogar Token do Usuario");
+        }
+    }
+
+    /**
+     * 
+     * @param userId Id do Usuario
+     * @param data Dados para a Atualização do Perfil
+     */
+    async updateProfileUser(userId: number, data: UserUpdateProfileType): Promise<void> {
+        try {
+            return await prisma.$transaction(async (tx) => {
+                // Atualiza os dados na tabela Usuario
+                await tx.usuario.updateMany({
+                    where: { id: userId },
+                    data: {
+                        foto: data.photo?.trim() ?? undefined,
+                        nome: data.name?.trim() ?? undefined,
+                        email: data.email?.trim() ?? undefined,
+                        telefone: data.phone?.trim() ?? undefined,
+
+                    }
+                });
+                if (data.provider !== undefined) {
+                    // Se haver dados em data.provider atualizar dados em Prestador
+                    await tx.prestador.updateMany({
+                        where: { usuarioId: userId },
+                        data: {
+                            nomeEstabelecimento: data.provider!.companyName?.trim() ?? undefined,
+                            descricao: data.provider!.description?.trim() ?? undefined,
+                            tipoServico: data.provider!.typeService?.trim() ?? undefined,
+                            instagram: data.provider!.instagram?.trim() ?? undefined,
+                            emailComercial: data.provider!.emailBusiness?.trim() ?? undefined,
+                            telefoneComercial: data.provider!.phoneBusiness?.trim() ?? undefined
+                        }
+                    });
+                }
+
+            })
+        } catch (e) {
+            console.log(`[REPOSITORY] Não foi possivel atualizar perfil do Usuario ${userId}`);
+            throw new InternalServerError("Error ao atualizar perfil do usuario !");
+        }
+    }
+
+    /**
+     * 
+     * @param userId Id do Usuario
+     * @param passwodHash Hash da senha
+     */
+    async updatePasswordOfUser(userId: number, passwodHash: string): Promise<void> {
+        try {
+            await prisma.usuario.updateMany({
+                where: { id: userId },
+                data: {
+                    senha: passwodHash
+                }
+            });
+        } catch (e) {
+            console.log(`[REPOSITORY] Não foi possivel atualizar a senha do Usuario ${userId}`);
+            throw new InternalServerError("Error ao atualizar senha do usuario !");
         }
     }
 }
