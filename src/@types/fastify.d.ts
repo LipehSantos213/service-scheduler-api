@@ -7,7 +7,6 @@ declare module "fastify" {
     interface FastifyRequest {
         currentUser: { prestador: Prestador | null } & Usuario | null;
     }
-
     interface FastifyInstance {
         getCurrentUser: (
             req: FastifyRequest,
