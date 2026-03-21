@@ -1,8 +1,10 @@
-import { ConflictError, NotFoundError, UnprocessableEntityError } from "../errors/http.errors";
-import { hash } from "../plugins/hashing";
+import { Prestador, Usuario } from "@prisma/client";
+import { ConflictError, NotFoundError, UnauthorizedError, UnprocessableEntityError } from "../errors/http.errors";
+import { compareHash, hash } from "../plugins/hashing";
 import { AuthRepository } from "../repositories/auth.repository";
 import { ProviderRepository } from "../repositories/provider.repository";
-import { UserCreateType } from "../schemas/user.schema";
+import { UserCreateType, UserUpdateProfileType } from "../schemas/user.schema";
+import { LoginType } from "../schemas/auth.schema";
 
 
 
@@ -106,11 +108,48 @@ export class AuthServices {
     }
 
     /**
+     * Buscar Usuario pelo Id
+     * @param userId Id do Usuario
+     * @returns Os dados do Usuario
+     */
+    async getUser(userId: number): Promise<{ prestador: Prestador | null } & Usuario> {
+        const user = await this.repository.getUserById(userId);
+        if (!user) {
+            console.log(`[AUTH] Usuario com o ID ${userId} não encontrado`);
+            throw new NotFoundError("Usuario não encontrado !");
+        }
+        return user;
+    }
+
+    /**
+     * Faz o login do Usuario com o Email e Senha Fornecido
+     * @param data Dados do Body com o Email e Senha
+     * @returns Os dados do Usuario registrado no Banco
+     */
+    async loginUser(data: LoginType): Promise<{ prestador: Prestador | null } & Usuario> {
+        // Buscar Usuario pelo email do body
+        const user = await this.repository.getUserByEmail(data.email.trim());
+        if (!user) {
+            console.log(`[AUTH] Tentativa se fazer login com o email: ${data.email.trim()}`);
+            throw new NotFoundError("Usuario não encontrado !");
+        }
+
+        // Verificar se data.password é igual ao hash no banco
+        const passwordIsCorrect = await compareHash(data.password.trim(), user.senha);
+        if (!passwordIsCorrect) {
+            console.log(`[AUTH] Tentativa de acessar a conta com o email: ${data.email}`);
+            throw new UnauthorizedError("Senha incorreta !");
+        }
+
+        return user;
+    }
+
+    /**
      * Registrar Usuario com a Role 'CUSTOMER'
      * @param data Dados do Body
-     * @returns id do usuario no banco de dados
+     * @returns Os dados do Usuario registrado no Banco
      */
-    async registerUserCustomer(data: UserCreateType): Promise<number> {
+    async registerUserCustomer(data: UserCreateType): Promise<Usuario> {
         // Verificar se os dados enviados já não existem no banco
         await this.validateDataForUser(data);
 
@@ -120,15 +159,15 @@ export class AuthServices {
         // Criar no banco de dados o usuario
         const userCreate = await this.repository.createUserCustomer(data, passwordHash);
 
-        return userCreate.id;
+        return userCreate;
     }
 
     /**
      * Registrar Usuario com a Role 'PROVIDER'
      * @param data Dados do Body
-     * @returns id do usuario no banco de dados 
+     * @returns Os dados do Usuario registrado no Banco
      */
-    async registerUserProvider(data: UserCreateType): Promise<number> {
+    async registerUserProvider(data: UserCreateType): Promise<{ prestador: Prestador | null } & Usuario | null> {
         // Validação dos Dados de Prestador
         this.validateProvideData(data);
 
@@ -141,7 +180,7 @@ export class AuthServices {
         // Criar no banco de dados o Usuario 'Provider'
         const userProvider = await this.repository.createUserProvider(data, passwordHash);
 
-        return userProvider!.id;
+        return userProvider;
     }
 
     /**
@@ -152,11 +191,7 @@ export class AuthServices {
      */
     async saveRefreshTokenOfUser(userId: number, token: string, jti: string): Promise<void> {
         // Verificar se o Usuario existe
-        const user = await this.repository.getUserById(userId);
-        if (!user) {
-            console.log(`[AUTH] Usuario com o ID ${userId} não encontrado !`);
-            throw new NotFoundError("Usuario não encontrado !");
-        }
+        await this.getUser(userId);
 
         // Verificar se não a um Refresh Token em uso
         const refreshExisting = await this.repository.getRefreshTokensOfUser(userId);
@@ -179,22 +214,48 @@ export class AuthServices {
      */
     async revokeRefreshOfUser(userId: number, jti: string): Promise<void> {
         // Verificar se o usuario existe
-        const user = await this.repository.getUserById(userId);
-        if (!user) {
-            console.log(`[AUTH] Usuario com o ID ${userId} não encontrado !`);
-            throw new NotFoundError("Usuario não encontrado !");
-        }
+        await this.getUser(userId);
 
-        // Verificar se o Token existe
+        // Verificar se o Token existe ou já foi revogado
         const refreshExisting = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
-        if (!refreshExisting) {
-            console.log(`[AUTH] Usuario ${userId} tentou revogar o token ${jti.trim()}, porem não existe`);
-            throw new NotFoundError("Token não existe !");
+        if (!refreshExisting || refreshExisting.revogado) {
+            console.log(`[AUTH] Usuario ${userId} tentou revogar o token ${jti.trim()}`);
+            throw new NotFoundError("Token não existe ou já foi invalidado");
         }
 
-        // Salvar o Token no banco de dados
+        // Atualizar o Token no banco de dados
         await this.repository.revokeRefreshToken(userId, jti.trim());
     }
+
+    /**
+     * 
+     * @param userId Id do Usuario
+     * @param data Dados a serem atualizados
+     */
+    async updateProfileUser(userId: number, data: UserUpdateProfileType): Promise<void> {
+        // Verificar se o Usuario existe no banco
+        await this.getUser(userId);
+
+        // Atualizar no banco com os dados enviados
+        await this.repository.updateProfileUser(userId, data);
+    }
+
+    /**
+     * 
+     * @param userId Id do Usuario
+     * @param newPassword Nova senha a ser atualizada
+     */
+    async updatePasswordUser(userId: number, newPassword: string): Promise<void> {
+        // Verificar se o usuario existe no banco
+        await this.getUser(userId);
+
+        // Gerar hash da nova senha
+        const hashPassword = await hash(newPassword);
+
+        // Atualizar no banco a nova senha 
+        await this.repository.updatePasswordOfUser(userId, hashPassword);
+    }
+
 
 
 }
