@@ -1,14 +1,16 @@
 import { FastifyInstance } from "fastify";
-import { RegisterBody, RegisterResponse } from "../../schemas/auth.schema";
+import { LoginBody, AuthResponseBody } from "../../schemas/auth.schema";
 import { Type } from "@sinclair/typebox";
-import { registerControllerUser } from "./auth.controllers";
-import { UserCreateBody } from "../../schemas/user.schema";
+import { loginControllerUser, meControllerUser, registerControllerUser } from "./auth.controllers";
+import { UserCreateBody, UserResponse } from "../../schemas/user.schema";
 
 
 
 
 
 export async function authRouters(app: FastifyInstance) {
+
+    const tag = "AUTH"
 
     const QueryAuth = {
         type: "object",
@@ -23,15 +25,31 @@ export async function authRouters(app: FastifyInstance) {
 
 
     app.post("/register", {
-        preHandler: [
-            // pegar usuario pelo token header
-        ],
         schema: {
             querystring: QueryAuth,
             body: UserCreateBody,
             response: {
-                201: RegisterResponse
+                201: AuthResponseBody
             }
         }
     }, registerControllerUser(app));
-}
+
+    app.post("/login", {
+        schema: {
+            querystring: QueryAuth,
+            body: LoginBody,
+            response: {
+                201: AuthResponseBody
+            }
+        }
+    }, loginControllerUser(app));
+
+    app.get("/me", {
+        preHandler: [app.getCurrentUser],
+        schema: {
+            response: {
+                200: UserResponse
+            }
+        }
+    }, meControllerUser())
+}   
