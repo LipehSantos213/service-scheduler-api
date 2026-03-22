@@ -45,7 +45,6 @@ export class AuthServices {
         }
     }
 
-
     /**
      * Analise para ver se os dados já não são cadastrados no banco
      * @param data Dados do Body
@@ -150,22 +149,22 @@ export class AuthServices {
      * @param jti Id dp token gerado no login
      * @param token Refresh Token na string pura
      */
-    async logoutUser(userId: number, jti: string): Promise<void> {
-        // Verifica se o Usuario existe
-        await this.getUser(userId);
+    // async logoutUser(userId: number, jti: string): Promise<void> {
+    //     // Verifica se o Usuario existe
+    //     await this.getUser(userId);
 
-        // Busca o registro na tabela Refresh Token com o userId e o jti
-        const tableRefreshUser = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
+    //     // Busca o registro na tabela Refresh Token com o userId e o jti
+    //     const tableRefreshUser = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
 
-        // Verifica se o que foi buscado não é vazio
-        if (!tableRefreshUser) {
-            console.log(`[AUTH] Usuario ${userId} tentou buscar seu token com o jti ${jti.trim()}`);
-            NotFoundError("Token não encontrado !");
-        }
+    //     // Verifica se o que foi buscado não é vazio
+    //     if (!tableRefreshUser) {
+    //         console.log(`[AUTH] Usuario ${userId} tentou buscar seu token com o jti ${jti.trim()}`);
+    //         NotFoundError("Token não encontrado !");
+    //     }
 
-        // Atualiza o registro na tabela como revogado
-        await this.repository.revokeRefreshToken(userId, jti);
-    }
+    //     // Atualiza o registro na tabela como revogado
+    //     await this.repository.revokeRefreshToken(userId, jti);
+    // }
 
     /**
      * Registrar Usuario com a Role 'CUSTOMER'
@@ -234,10 +233,11 @@ export class AuthServices {
      * Revoga o Token na Black List 
      * @param userId Id do Usuario
      * @param jti Id do refresh Token
+     * @returns Dados do Usuario que revogou o Token
      */
-    async revokeRefreshOfUser(userId: number, jti: string): Promise<void> {
+    async revokeRefreshOfUser(userId: number, jti: string): Promise<Usuario> {
         // Verificar se o usuario existe
-        await this.getUser(userId);
+        const user = await this.getUser(userId);
 
         // Verificar se o Token existe ou já foi revogado
         const refreshExisting = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
@@ -248,6 +248,8 @@ export class AuthServices {
 
         // Atualizar o Token no banco de dados
         await this.repository.revokeRefreshToken(userId, jti.trim());
+
+        return user;
     }
 
     /**
@@ -268,9 +270,18 @@ export class AuthServices {
      * @param userId Id do Usuario
      * @param newPassword Nova senha a ser atualizada
      */
-    async updatePasswordUser(userId: number, newPassword: string): Promise<void> {
+    async updatePasswordUser(userId: number, currentPassword: string, newPassword: string): Promise<void> {
         // Verificar se o usuario existe no banco
-        await this.getUser(userId);
+        const user = await this.getUser(userId);
+
+        // Comparar senha enviada com o hash da senha no banco de dados
+        const passwordCorrect = await compareHash(currentPassword, user.senha);
+
+        // Verificar se a senha atual esta correta
+        if (!passwordCorrect) {
+            console.log(`[AUTH] Usuario ${userId} errou sua senha atual !`);
+            throw new UnauthorizedError("Senha incorreta !");
+        }
 
         // Gerar hash da nova senha
         const hashPassword = await hash(newPassword);
@@ -278,8 +289,5 @@ export class AuthServices {
         // Atualizar no banco a nova senha 
         await this.repository.updatePasswordOfUser(userId, hashPassword);
     }
-
-
-
 }
 
