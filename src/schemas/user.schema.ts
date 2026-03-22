@@ -35,7 +35,9 @@ export type UserUpdateProfileType = Static<typeof UserUpdateProfileBody>;
 export const UserUpdatePassword = Type.Object({
     currentPassword: Type.String(),
     newPassword: Type.String({ minLength: 8 }),
-})
+});
+
+export type UserUpdatePasswordType = Static<typeof UserUpdatePassword>;
 
 export const UserRole = Type.Union([
     Type.Literal("CUSTOMER"), // Cliente
