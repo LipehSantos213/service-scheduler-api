@@ -145,6 +145,29 @@ export class AuthServices {
     }
 
     /**
+     * Realiza o logout do Usuario revogando o Refresh Token que esta utilizando
+     * @param userId Id do Usuario
+     * @param jti Id dp token gerado no login
+     * @param token Refresh Token na string pura
+     */
+    async logoutUser(userId: number, jti: string): Promise<void> {
+        // Verifica se o Usuario existe
+        await this.getUser(userId);
+
+        // Busca o registro na tabela Refresh Token com o userId e o jti
+        const tableRefreshUser = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
+
+        // Verifica se o que foi buscado não é vazio
+        if (!tableRefreshUser) {
+            console.log(`[AUTH] Usuario ${userId} tentou buscar seu token com o jti ${jti.trim()}`);
+            NotFoundError("Token não encontrado !");
+        }
+
+        // Atualiza o registro na tabela como revogado
+        await this.repository.revokeRefreshToken(userId, jti);
+    }
+
+    /**
      * Registrar Usuario com a Role 'CUSTOMER'
      * @param data Dados do Body
      * @returns Os dados do Usuario registrado no Banco

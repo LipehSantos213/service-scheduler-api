@@ -30,3 +30,8 @@ export const AuthResponseBody = Type.Object({
     refreshToken: Type.String(),
     user: UserResponse,
 });
+
+
+export const MessageResponse = Type.Object({
+    message: Type.String()
+})

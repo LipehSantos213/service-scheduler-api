@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
-import { LoginBody, AuthResponseBody } from "../../schemas/auth.schema";
+import { LoginBody, AuthResponseBody, MessageResponse } from "../../schemas/auth.schema";
 import { Type } from "@sinclair/typebox";
-import { loginControllerUser, meControllerUser, registerControllerUser } from "./auth.controllers";
+import { loginControllerUser, logoutControllerUser, meControllerUser, registerControllerUser } from "./auth.controllers";
 import { UserCreateBody, UserResponse } from "../../schemas/user.schema";
 
 
@@ -21,6 +21,14 @@ export async function authRouters(app: FastifyInstance) {
             }
         },
         required: ["role"]
+    }
+
+    const HeaderRefresh = {
+        type: "object",
+        properties: {
+            'x-refresh-token': { type: "string" }
+        },
+        required: ["x-refresh-token"]
     }
 
 
@@ -51,5 +59,14 @@ export async function authRouters(app: FastifyInstance) {
                 200: UserResponse
             }
         }
-    }, meControllerUser())
+    }, meControllerUser());
+
+    app.post("/logout", {
+        schema: {
+            headers: HeaderRefresh,
+            response: {
+                200: MessageResponse
+            }
+        }
+    }, logoutControllerUser(app));
 }   

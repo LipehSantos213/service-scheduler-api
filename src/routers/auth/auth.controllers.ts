@@ -3,7 +3,7 @@ import { AuthServices } from "../../services/auth.services";
 import { AuthRepository } from "../../repositories/auth.repository";
 import { UserCreateType, UserResponseType } from "../../schemas/user.schema";
 import { randomUUID } from "node:crypto";
-import { UnprocessableEntityError } from "../../errors/http.errors";
+import { UnauthorizedError, UnprocessableEntityError } from "../../errors/http.errors";
 import { LoginType } from "../../schemas/auth.schema";
 
 
@@ -83,6 +83,28 @@ export const meControllerUser = () =>
         return reply.status(200).send(userResponse);
 
 
+    }
+
+
+export const logoutControllerUser = (app: FastifyInstance) =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+        // Pegar o Refresh fornecido no Header personalizado
+        const headerRefresh = req.headers['x-refresh-token'] as string
+
+        // Validação se o Token foi fornecido
+        if (!headerRefresh) {
+            UnauthorizedError("Refresh Token não fornecido do Header !");
+        }
+
+        // Desfaz a assinatura do Token
+        const payload = await app.jwt.verify(headerRefresh) as { sub: number, jti: string };
+
+        // Realiza o Logout do usuario
+        await service.logoutUser(payload.sub, payload.jti);
+
+        return reply.status(201).send({
+            messagem: "Logout realizado com sucesso !"
+        })
     }
 
 function mapUser(user: any): UserResponseType {
