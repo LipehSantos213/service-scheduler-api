@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthServices } from "../../services/auth.services";
 import { AuthRepository } from "../../repositories/auth.repository";
-import { UserCreateType, UserResponseType } from "../../schemas/user.schema";
+import { UserCreateType, UserResponseType, UserUpdatePasswordType, UserUpdateProfileType } from "../../schemas/user.schema";
 import { randomUUID } from "node:crypto";
 import { UnauthorizedError, UnprocessableEntityError } from "../../errors/http.errors";
 import { LoginType } from "../../schemas/auth.schema";
@@ -66,8 +66,7 @@ export const loginControllerUser = (app: FastifyInstance) =>
             accessToken,
             refreshToken,
             user: userResponse,
-        })
-
+        });
     }
 
 export const meControllerUser = () =>
@@ -81,10 +80,7 @@ export const meControllerUser = () =>
             mapUserProvider(user, user!.prestador);
 
         return reply.status(200).send(userResponse);
-
-
     }
-
 
 export const logoutControllerUser = (app: FastifyInstance) =>
     async (req: FastifyRequest, reply: FastifyReply) => {
@@ -100,10 +96,63 @@ export const logoutControllerUser = (app: FastifyInstance) =>
         const payload = await app.jwt.verify(headerRefresh) as { sub: number, jti: string };
 
         // Realiza o Logout do usuario
-        await service.logoutUser(payload.sub, payload.jti);
+        await service.revokeRefreshOfUser(payload.sub, payload.jti);
 
         return reply.status(201).send({
             messagem: "Logout realizado com sucesso !"
+        })
+    }
+
+export const refreshTokenRotationController = (app: FastifyInstance) =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+        // Pegar no Header o Token
+        const headerRefresh = req.headers['x-refresh-token'] as string;
+
+        // Desfazer a assinatura do token
+        const payload = app.jwt.verify(headerRefresh) as { sub: number, jti: string };
+
+        // Revogar o token no banco de dados e Busca os Dados do Usuario
+        const user = await service.revokeRefreshOfUser(payload.sub, payload.jti);
+
+        // Assina um novo Access e Refresh Token
+        const { accessToken, refreshToken } = await generateTokens(app, payload.sub, user.role);
+
+        return reply.status(201).send({
+            accessToken,
+            refreshToken,
+            user
+        });
+    }
+
+export const updateProfileControllerUser = () =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+        // Pegar os dados do body
+        const data = req.body as UserUpdateProfileType;
+
+        // Pegar o Id do Usuario assinado no accessToken
+        const userId = req.currentUser!.id;
+
+        // Atualizar dados enviados
+        await service.updateProfileUser(userId, data);
+
+        return reply.status(200).send({
+            message: "Perfil Atualizado com sucesso !"
+        });
+    }
+
+export const updatePasswordControllerUser = () =>
+    async (req: FastifyRequest, reply: FastifyReply) => {
+        // Pegar dados enviados no Body
+        const data = req.body as UserUpdatePasswordType;
+
+        // Pegar Id do Usuario assinado no Token
+        const userId = req.currentUser!.id;
+
+        // Atualiza no banco de dados a nova senha
+        await service.updatePasswordUser(userId, data.currentPassword.trim(), data.newPassword.trim());
+
+        return reply.status(200).send({
+            message: "Senha atualizada com sucesso !"
         })
     }
 
@@ -134,6 +183,13 @@ function mapUserProvider(user: any, prov: any): UserResponseType {
     }
 }
 
+/**
+ * Faz a assinatura de um novo Access e Refresh Token salvando o Refresh no Banco
+ * @param app Instância do Fastify
+ * @param userId Id do Usuario
+ * @param role Tipo do Usuario
+ * @returns Retorna um novo o Access e Refresh Token
+ */
 async function generateTokens(app: FastifyInstance, userId: number, role: string): Promise<{ accessToken: string, refreshToken: string }> {
     // Assinar o Access Token
     const accessToken = app.jwt.sign({
