@@ -11,8 +11,7 @@ export const TypeServices = Type.Union([
     Type.Literal("ELECTRICIAN"), // ELETRICISTA
     Type.Literal("AESTHETICS"), // ESTETICA
     Type.Literal("PHYSIOTHERAPY")
-])
-
+]);
 
 export const CreateProviderBody = Type.Object({
     companyName: Type.String({ minLength: 10, maxLength: 200 }),
@@ -48,4 +47,4 @@ export const ProviderResponseBody = Type.Object({
     emailBusiness: Type.String(),
     phoneBusiness: Type.String(),
     updatedAt: Type.String({ format: "date-time" }),
-})
+});
