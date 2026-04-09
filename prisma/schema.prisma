@@ -28,10 +28,10 @@ model Usuario {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  refreshTokens RefreshTokens[]
-  prestador     Prestador?
-  agendamentos  Agendamento[]
-  agendamentosCancelados  Agendamento[] @relation("cancelados")
+  refreshTokens          RefreshTokens[]
+  prestador              Prestador?
+  agendamentos           Agendamento[]
+  agendamentosCancelados Agendamento[]   @relation("cancelados")
 
   @@map("usuarios")
 }
@@ -79,13 +79,14 @@ model Disponibilidade {
   id          Int      @id @default(autoincrement())
   prestadorId Int
   diaSemana   Int // 0:Domingo, 1:Segunda ... 6:Sabado
-  horaInicio  String // Exemplo: 08:43
-  horaFim     String
+  horaInicio  DateTime @db.Time()
+  horaFim     DateTime @db.Time()
   intervalo   Int // em minutos
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  prestador Prestador @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+  prestador    Prestador     @relation(fields: [prestadorId], references: [id], onDelete: Cascade)
+  agendamentos Agendamento[]
 
   @@unique([prestadorId, diaSemana])
   @@map("disponibilidades")
@@ -131,34 +132,36 @@ model Endereco {
 
 enum StatusAgendamento {
   WAITING // ESPERANDO PRESTADOR CONFIRMAR
-  CONFIRMED
+  CONFIRMED // Prestador Confirmou
   CANCELLED
   RESCHEDULED // REMARCADO
   NO_SHOW // AGENDOU E NÃO COMPARECEU
+  FINISHED
 }
 
 model Agendamento {
-  id              Int               @id @default(autoincrement())
-  clienteId       Int
-  prestadorId     Int
-  servicoId       Int
-  enderecoId      Int
-  canceladoPorId  Int?
-  data            DateTime          @db.Date()
-  inicio          String // Exemplo: 08:30
-  fim             String
-  status          StatusAgendamento @default(WAITING)
-  createdAt       DateTime          @default(now())
-  canceladoAt     DateTime?
-  motivoCancelado String?
+  id                Int               @id @default(autoincrement())
+  disponibilidadeId Int
+  clienteId         Int
+  prestadorId       Int
+  servicoId         Int
+  enderecoId        Int
+  canceladoPorId    Int?
+  data              DateTime          @db.Date()
+  inicio            DateTime          @db.Time()
+  fim               DateTime          @db.Time()
+  status            StatusAgendamento @default(WAITING)
+  createdAt         DateTime          @default(now())
+  canceladoAt       DateTime?
+  motivoCancelado   String?
 
-  cliente   Usuario   @relation(fields: [clienteId], references: [id])
-  prestador Prestador @relation(fields: [prestadorId], references: [id])
-  servico   Servico   @relation(fields: [servicoId], references: [id])
-  endereco  Endereco  @relation(fields: [enderecoId], references: [id])
+  disponibilidade Disponibilidade @relation(fields: [disponibilidadeId], references: [id])
+  cliente         Usuario         @relation(fields: [clienteId], references: [id])
+  prestador       Prestador       @relation(fields: [prestadorId], references: [id])
+  servico         Servico         @relation(fields: [servicoId], references: [id])
+  endereco        Endereco        @relation(fields: [enderecoId], references: [id])
 
-  canceladoPor Usuario?  @relation("cancelados", fields: [canceladoPorId], references: [id], onDelete: Cascade)
-
+  canceladoPor Usuario? @relation("cancelados", fields: [canceladoPorId], references: [id], onDelete: Cascade)
 
   @@map("agendamentos")
 }
