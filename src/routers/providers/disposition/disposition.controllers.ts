@@ -12,11 +12,14 @@ const service = new ProviderService(new ProviderRepository);
 // Criar Disponibilidade
 export const registerNewAvailability = () =>
     async (req: FastifyRequest, reply: FastifyReply) => {
+        // Pegar dados do body
         const data = req.body as CreateAvailabilityType;
-        const userId = req.currentUser!.id;
+
+        // Pegar id assinado no token
+        const providerId = req.currentUser!.prestador!.id;
 
         // Criar Disponibilidade 
-        await service.createAvailability(userId, data);
+        await service.createAvailability(providerId, data);
 
         return reply.status(201).send({
             message: "Disponibilidade criada com sucesso !"
@@ -26,10 +29,13 @@ export const registerNewAvailability = () =>
 // Buscar Disponibilidades em um dia especifico
 export const getAvailability = () =>
     async (req: FastifyRequest, reply: FastifyReply) => {
+        // Buscar path do passado do endpoint da rota
         const { dayAvailability } = req.params as { dayAvailability: number };
-        const userId = req.currentUser!.id;
 
-        const availabilities = await service.getAvailability(userId, dayAvailability);
+        // Pegar id do prestador assinado no token
+        const providerId = req.currentUser!.prestador!.id;
+
+        const availabilities = await service.getAvailability(providerId, dayAvailability);
 
         const response = availabilities.map((value) => mapAvailability(value));
 
@@ -38,11 +44,11 @@ export const getAvailability = () =>
 
 export const getAllAvailability = () =>
     async (req: FastifyRequest, reply: FastifyReply) => {
-        // Pegar Id do usuario
-        const userId = req.currentUser!.id;
+        // Pegar Id do prestador assinado no token
+        const providerId = req.currentUser!.prestador!.id;
 
         // Buscar disponibilidades
-        const availabilities = await service.getAllAvailabilityOfProvider(userId);
+        const availabilities = await service.getAllAvailabilityOfProvider(providerId);
 
         const response: ResponseAllAvailabilityType = [];
 
@@ -94,10 +100,10 @@ export const updateAvailability = () =>
         // Pegar id da disponibilidade
         const { idAvailability } = req.params as { idAvailability: number };
 
-        // Pegar o id do usuario
-        const userId = req.currentUser!.id;
+        // Pegar o id do prestador assinado no token
+        const providerId = req.currentUser!.prestador!.id;
 
-        await service.updateAvailability(userId, idAvailability, data);
+        await service.updateAvailability(providerId, idAvailability, data);
 
         return reply.status(200).send({
             message: "Disponibilidade atualizada com sucesso !"
@@ -111,10 +117,10 @@ export const deleteAvailability = () =>
         const { idAvailability } = req.params as { idAvailability: number };
 
         // Pegar id do usuario no token
-        const userId = req.currentUser!.id;
+        const providerId = req.currentUser!.prestador!.id;
 
         // Deletar no banco de dados
-        await service.deleteAvailability(userId, idAvailability);
+        await service.deleteAvailability(providerId, idAvailability);
 
         return reply.status(200).send({
             message: "Disponibilidade deletada com sucesso !"
