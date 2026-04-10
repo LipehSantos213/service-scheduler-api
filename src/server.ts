@@ -8,6 +8,7 @@ import rateLimit from "@fastify/rate-limit";
 import jwt from "@fastify/jwt";
 import { authPlugin } from "./plugins/auth";
 import { authRouters } from "./routers/auth/auth.routers";
+import { addressRoutersProvider } from "./routers/providers/address/address.routers";
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -69,9 +70,17 @@ async function startServer() {
         }
     });
 
+    // ================== Registro das Rotas ==================
     fastify.register(authRouters, {
         prefix:"api/v1/auth"
-    })
+    });
+
+
+    fastify.register(addressRoutersProvider, {
+        prefix:"api/v1/providers/address"
+    });
+
+    // ================== Fim do Registro ==================
 
     await fastify.listen({
         port: 3000, host: "0.0.0.0"
