@@ -57,28 +57,24 @@ export class ProviderService {
 
     /**
      * Criação de uma Disponibilidade do Prestador
-     * @param userId Id no prestador na tabela Usuario
+     * @param providerId Id do usuario na tabela Prestador
      * @param data Dados para a criação da Disponibilidade
      */
-    async createAvailability(userId: number, data: CreateAvailabilityType): Promise<void> {
-        // Buscar dados do Prestador pelo userId
-        const userProvider = await this.getProvider(userId);
+    async createAvailability(providerId: number, data: CreateAvailabilityType): Promise<void> {
+        // Fazer verificação de horarios
 
         // Criar no banco o registro da Disponibilidade
-        await this.repository.createAvailabilityOfProvider(userProvider.prestador!.id, data);
+        await this.repository.createAvailabilityOfProvider(providerId, data);
     }
 
     /**
      * Busca todas as Disponibilidade do Prestador
-     * @param userId Id do usuario na tabela Usuario
+     * @param providerId Id do usuario na tabela Prestador
      * @returns Todas os registros na tabela Disponibilidade do Prestador
      */
-    async getAllAvailabilityOfProvider(userId: number): Promise<Disponibilidade[]> {
-        // Buscar prestador pelo Id do usuario
-        const provider = await this.getProvider(userId);
-
+    async getAllAvailabilityOfProvider(providerId: number): Promise<Disponibilidade[]> {
         // Buscar todas os registros do Prestador em Disponibilidade
-        const availabilities = await this.repository.getAllAvailabilityOfProvider(provider.prestador!.id);
+        const availabilities = await this.repository.getAllAvailabilityOfProvider(providerId);
 
         // Analisar se há algum registro retornado
         if (!availabilities) {
@@ -90,16 +86,13 @@ export class ProviderService {
 
     /**
      * Buscar Disponibilidade em um dia da semana
-     * @param userId Id do usuario na tabela Usuario
+     * @param providerId Id do usuario na tabela Prestador
      * @param day Dia da semana
      * @returns Todas as Disponibilidade registras no dia
      */
-    async getAvailability(userId: number, day: number): Promise<Disponibilidade[]> {
-        // Buscar dados do Prestador pelo userId
-        const userProvider = await this.getProvider(userId);
-
+    async getAvailability(providerId: number, day: number): Promise<Disponibilidade[]> {
         // Buscar as Disponibilidade do dia
-        const availability = await this.repository.getAvailabilityOfDay(userProvider.prestador!.id, day);
+        const availability = await this.repository.getAvailabilityOfDay(providerId, day);
 
         // Verificar se não foi encontrado nada
         if (!availability) {
@@ -111,37 +104,31 @@ export class ProviderService {
 
     /**
      * Atualizar dados da Disponibilidade
-     * @param userId Id do usuario na tabela Usuario
+     * @param providerId Id do usuario na tabela Prestador
      * @param idAvailability Id da disponibilidade
      * @param data Dados para atualizar disponibilidade
      */
-    async updateAvailability(userId: number, idAvailability: number, data: UpdateAvailabilityType):Promise<void> {
-        // Buscar dados do prestador pelo userId
-        const userProvider = await this.getProvider(userId);
-
+    async updateAvailability(providerId: number, idAvailability: number, data: UpdateAvailabilityType):Promise<void> {
         // Buscar Disponibilidade pelo Id
-        const availability = await this.repository.getAvailabilityById(userProvider.prestador!.id, idAvailability);
+        const availability = await this.repository.getAvailabilityById(providerId, idAvailability);
 
         // Verificar se há disponibilidade nesse dia
         if(!availability){
-            throw new NotFoundError("Não disponibilidade para esse dia");
+            throw new NotFoundError("Não há disponibilidade para esse dia");
         }
 
         // Atualizar no banco os dados da disponibilidade
-        await this.repository.toUpdateAvailabilityOfProvider(userProvider.prestador!.id, idAvailability, data);
+        await this.repository.toUpdateAvailabilityOfProvider(providerId, idAvailability, data);
     }
 
     /**
      * Deletar uma disponibilidade pelo Id
-     * @param userId Id do usuario na tabela Usuario
+     * @param providerId Id do usuario na tabela Prestador
      * @param availabilityId Id da disponibilidade
      */
-    async deleteAvailability(userId:number, availabilityId:number):Promise<void>{
-        // Buscar dados do Prestador
-        const userProvider = await this.getProvider(userId);
-
+    async deleteAvailability(providerId:number, availabilityId:number):Promise<void>{
         // Verifiar se a Disponibilidade existe mesmo
-        const availability = await this.repository.getAvailabilityById(userProvider.prestador!.id, availabilityId);
+        const availability = await this.repository.getAvailabilityById(providerId, availabilityId);
 
         // Verifica se foi retornado algum valor
         if(!availability){
@@ -149,7 +136,7 @@ export class ProviderService {
         }
 
         // Remover no banco de dados o Registro da disponibilidade
-        await this.repository.toDeleteAvailabilityOfProvider(userProvider.prestador!.id, availabilityId);
+        await this.repository.toDeleteAvailabilityOfProvider(providerId, availabilityId);
     }
 
     /**

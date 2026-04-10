@@ -7,8 +7,13 @@ declare module "fastify" {
     interface FastifyRequest {
         currentUser: { prestador: Prestador | null } & Usuario | null;
     }
-    
+
     interface FastifyInstance {
+        requireRole: (role: string) => (
+            req:FastifyRequest,
+            reply:FastifyReply
+        )=> Promise<void>
+
         getCurrentUser: (
             req: FastifyRequest,
             reply: FastifyReply
