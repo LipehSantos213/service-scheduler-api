@@ -2,8 +2,6 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateAvailabilityType, ResponseAllAvailabilityType, ResponseAvailabilityType, UpdateAvailabilityType } from "../../../schemas/availability.schema";
 import { ProviderService } from "../../../services/providers.services";
 import { ProviderRepository } from "../../../repositories/provider.repository";
-import { Disponibilidade } from "@prisma/client";
-
 
 
 const service = new ProviderService(new ProviderRepository);
@@ -107,7 +105,7 @@ export const updateAvailability = () =>
 
         return reply.status(200).send({
             message: "Disponibilidade atualizada com sucesso !"
-        })
+        });
     }
 
 // Deletar uma Disponibilidade pelo Id
