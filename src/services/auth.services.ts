@@ -40,7 +40,7 @@ export class AuthServices {
                 value === ""
             ) {
                 console.log(`[AUTH] O campo '${field}' precisa ser fornecido`);
-                throw new UnprocessableEntityError(`O campo '${field}' precisa ser fornecido`);
+                throw new UnprocessableEntityError(`${field.toUpperCase()}_NOT_SENT`, `O campo '${field}' precisa ser fornecido`);
             }
         }
     }
@@ -82,7 +82,7 @@ export class AuthServices {
                 const instagramExisting = await providerRepository.getPrviderByInstagram(data.provider.instagram);
                 if (instagramExisting) {
                     console.log("[AUTH] Instagram já cadastrado !");
-                    throw new ConflictError("Tente outro instagram !");
+                    throw new ConflictError("INSTAGRAM_EXISTING", "Tente outro instagram !");
                 }
 
             }
@@ -91,14 +91,14 @@ export class AuthServices {
             const emailBusiness = await providerRepository.getProviderByBusinessEmail(data.provider.emailBusiness.trim());
             if (emailBusiness) {
                 console.log("[AUTH] Email comercial enviado pelo usuario já é existente");
-                throw new ConflictError("Tente outro email comercial");
+                throw new ConflictError("COMERCIAL_EMAIL_EXISTING", "Tente outro email comercial");
             }
 
             // Analizar se o telefone comercial já não é existente
             const phoneBusiness = await providerRepository.getProviderByBusinessPhone(data.provider.phoneBusiness.trim());
             if (phoneBusiness) {
                 console.log("[AUTH] Telefone comercial enviado pelo usuario já é existente");
-                throw new ConflictError("Tente outro telefone comercial");
+                throw new ConflictError("COMERCIAL_PHONE_EXISTING", "Tente outro telefone comercial");
             }
 
         }
@@ -115,7 +115,7 @@ export class AuthServices {
         const user = await this.repository.getUserById(userId);
         if (!user) {
             console.log(`[AUTH] Usuario com o ID ${userId} não encontrado`);
-            throw new NotFoundError("Usuario não encontrado !");
+            throw new NotFoundError("USER_NOT_FOUND", "Usuario não encontrado !");
         }
         return user;
     }
@@ -130,42 +130,19 @@ export class AuthServices {
         const user = await this.repository.getUserByEmail(data.email.trim());
         if (!user) {
             console.log(`[AUTH] Tentativa se fazer login com o email: ${data.email.trim()}`);
-            throw new NotFoundError("Usuario não encontrado !");
+            throw new NotFoundError("USER_NOT_FOUND", "Usuario não encontrado !");
         }
 
         // Verificar se data.password é igual ao hash no banco
         const passwordIsCorrect = await compareHash(data.password.trim(), user.senha);
         if (!passwordIsCorrect) {
             console.log(`[AUTH] Tentativa de acessar a conta com o email: ${data.email}`);
-            throw new UnauthorizedError("Senha incorreta !");
+            throw new UnauthorizedError("UNAUTHORIZED", "Senha incorreta !");
         }
 
         return user;
     }
-
-    /**
-     * Realiza o logout do Usuario revogando o Refresh Token que esta utilizando
-     * @param userId Id do Usuario
-     * @param jti Id dp token gerado no login
-     * @param token Refresh Token na string pura
-     */
-    // async logoutUser(userId: number, jti: string): Promise<void> {
-    //     // Verifica se o Usuario existe
-    //     await this.getUser(userId);
-
-    //     // Busca o registro na tabela Refresh Token com o userId e o jti
-    //     const tableRefreshUser = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
-
-    //     // Verifica se o que foi buscado não é vazio
-    //     if (!tableRefreshUser) {
-    //         console.log(`[AUTH] Usuario ${userId} tentou buscar seu token com o jti ${jti.trim()}`);
-    //         NotFoundError("Token não encontrado !");
-    //     }
-
-    //     // Atualiza o registro na tabela como revogado
-    //     await this.repository.revokeRefreshToken(userId, jti);
-    // }
-
+    
     /**
      * Registrar Usuario com a Role 'CUSTOMER'
      * @param data Dados do Body
@@ -219,7 +196,7 @@ export class AuthServices {
         const refreshExisting = await this.repository.getRefreshTokensOfUser(userId);
         if (refreshExisting) {
             console.log(`[AUTH] Usuario com o ID ${userId} tentou pegar outro Refresh Token !`);
-            throw new ConflictError("Já existe um Refresh Token em uso pelo usuario !");
+            throw new ConflictError("UNAUTHORIZED", "Já existe um Refresh Token em uso pelo usuario !");
         }
 
         // Gerar um hash do token enviado no paramento
@@ -243,7 +220,7 @@ export class AuthServices {
         const refreshExisting = await this.repository.getRefreshTokenWithJTI(userId, jti.trim());
         if (!refreshExisting || refreshExisting.revogado) {
             console.log(`[AUTH] Usuario ${userId} tentou revogar o token ${jti.trim()}`);
-            throw new NotFoundError("Token não existe ou já foi invalidado");
+            throw new NotFoundError("TOKEN_NOT_FOUND", "Token não existe ou já foi invalidado");
         }
 
         // Atualizar o Token no banco de dados
@@ -280,7 +257,7 @@ export class AuthServices {
         // Verificar se a senha atual esta correta
         if (!passwordCorrect) {
             console.log(`[AUTH] Usuario ${userId} errou sua senha atual !`);
-            throw new UnauthorizedError("Senha incorreta !");
+            throw new UnauthorizedError("UNAUTHORIZED", "Senha incorreta !");
         }
 
         // Gerar hash da nova senha

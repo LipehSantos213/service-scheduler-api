@@ -1,35 +1,32 @@
-
-import { Prestador, Usuario } from "@prisma/client"
-import "fastify"
+import { Prestador, Usuario } from "@prisma/client";
+import "fastify";
 import "@fastify/jwt";
 
 declare module "fastify" {
     interface FastifyRequest {
-        currentUser: { prestador: Prestador | null } & Usuario | null;
+        currentUser: ({ prestador: Prestador | null } & Usuario) | null;
     }
 
     interface FastifyInstance {
         requireRole: (role: string) => (
-            req:FastifyRequest,
-            reply:FastifyReply
-        )=> Promise<void>
+            req: FastifyRequest,
+            reply: FastifyReply
+        ) => Promise<void>;
 
         getCurrentUser: (
             req: FastifyRequest,
             reply: FastifyReply
-        ) => Promise<void>
+        ) => Promise<void>;
     }
 }
-
-
 
 declare module "@fastify/jwt" {
     interface FastifyJWT {
         payload: {
             sub: number;
             role?: string;
-            type?: string
-            jti?: string
-        }
+            jti?: string;
+            type?: string;
+        };
     }
 }

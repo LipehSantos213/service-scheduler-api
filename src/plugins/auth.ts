@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest } from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../database/prisma";
 import fp from "fastify-plugin";
 import { NotFoundError, UnauthorizedError, UnprocessableEntityError } from "../errors/http.errors";
@@ -11,16 +11,17 @@ export async function authPlugin(app: FastifyInstance) {
 
     app.decorate(
         "getCurrentUser",
-        async (req: FastifyRequest, reply: any) => {
+        async (req: FastifyRequest, reply: FastifyReply) => {
             // Pega o token no Header e organiza como o payload
             await req.jwtVerify();
 
             // user.sub pego pelo jwtVerify
-            const userId = req.user.sub;
+            const { sub } = req.user as { sub: number };
+            const userId = Number(sub);
 
             // Busca o usuario pelo seu ID
             const user = await prisma.usuario.findUnique({
-                where: { id: Number(userId) },
+                where: { id: userId },
                 include: {
                     prestador: true
                 }
@@ -28,7 +29,7 @@ export async function authPlugin(app: FastifyInstance) {
 
             // Se não encontrar, despara um error
             if (!user) {
-                throw new NotFoundError("Usuario não encontrado !");
+                throw new NotFoundError("USER_NOT_FOUND", "Usuario não encontrado !");
             }
 
             // Atribui a propriedade da request à os dados do usuario
@@ -41,14 +42,11 @@ export async function authPlugin(app: FastifyInstance) {
         (role: string) => {
             return async (req: FastifyRequest, reply: any) => {
                 if (!req.currentUser) {
-                    throw new UnprocessableEntityError("Não foi possivel buscar Usuario pelo Header");
+                    throw new UnprocessableEntityError("", "Não foi possivel buscar Usuario pelo Header");
                 }
                 const userRole = req.currentUser.role;
-                if (role === userRole) {
-                    return; // Acesso permitido
-                }
-                else {
-                    throw new UnauthorizedError("Recurso não autorizado !");
+                if (userRole !== role) {
+                    throw new UnauthorizedError("UNAUTHORIZED", "Recurso não autorizado!");
                 }
 
             }

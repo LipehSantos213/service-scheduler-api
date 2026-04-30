@@ -27,7 +27,7 @@ export const registerNewAvailability = () =>
 // Buscar Disponibilidades em um dia especifico
 export const getAvailability = () =>
     async (req: FastifyRequest, reply: FastifyReply) => {
-        // Buscar path do passado do endpoint da rota
+        // Buscar path passado do endpoint da rota
         const { dayAvailability } = req.params as { dayAvailability: number };
 
         // Pegar id do prestador assinado no token
@@ -126,7 +126,7 @@ export const deleteAvailability = () =>
 
     }
 
-function mapAvailability(a: any): ResponseAvailabilityType {
+export function mapAvailability(a: any): ResponseAvailabilityType {
     return {
         id: a.id,
         dayWeek: a.diaSemana,

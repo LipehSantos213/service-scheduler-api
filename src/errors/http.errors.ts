@@ -1,97 +1,58 @@
-import createError from "@fastify/error";
+export class AppError extends Error {
+    statusCode: number
+    error: string
 
-/* =========================
-   2xx — SUCESSO (raramente lançados)
-========================= */
-// Normalmente NÃO se lança erro 2xx
-// incluído apenas por padronização
+    constructor(error: string, message: string, statusCode = 500) {
+        super(message);
+        this.statusCode = statusCode;
+        this.error = error;
+    }
+}
 
-export const Ok = createError(
-  "OK",
-  " ",
-  200
-);
+export class BadRequestError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 400);
+    }
+}
 
-export const Created = createError(
-  "CREATED",
-  " ",
-  201
-);
+export class UnauthorizedError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 401);
+    }
+}
 
-/* =========================
-   4xx — ERROS DO CLIENTE
-========================= */
+export class ForbiddenError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 403);
+    }
+}
 
-// 400
-export const BadRequestError = createError(
-  "BAD_REQUEST",
-  " ",
-  400
-);
+export class NotFoundError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 404);
+    }
+}
 
-// 401
-export const UnauthorizedError = createError(
-  "UNAUTHORIZED",
-  " ",
-  401
-);
+export class ConflictError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 409);
+    }
+}
 
-// 403
-export const ForbiddenError = createError(
-  "FORBIDDEN",
-  " ",
-  403
-);
+export class UnprocessableEntityError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 422);
+    }
+}
 
-// 404
-export const NotFoundError = createError(
-  "NOT_FOUND",
-  " ",
-  404
-);
+export class TooManyRequestsError extends AppError {
+    constructor(error: string, message: string) {
+        super(error, message, 429);
+    }
+}
 
-// 409
-export const ConflictError = createError(
-  "CONFLICT",
-  " ",
-  409
-);
-
-// 422
-export const UnprocessableEntityError = createError(
-  "UNPROCESSABLE_ENTITY",
-  " ",
-  422
-);
-
-// 429
-export const TooManyRequestsError = createError(
-  "TOO_MANY_REQUESTS",
-  " ",
-  429
-);
-
-/* =========================
-   5xx — ERROS DO SERVIDOR
-========================= */
-
-// 500
-export const InternalServerError = createError(
-  "INTERNAL_SERVER_ERROR",
-  " ",
-  500
-);
-
-// 502
-export const BadGatewayError = createError(
-  "BAD_GATEWAY",
-  " ",
-  502
-);
-
-// 503
-export const ServiceUnavailableError = createError(
-  "SERVICE_UNAVAILABLE",
-  " ",
-  503
-);
+export class InternalServerError extends AppError {
+    constructor(message: string) {
+        super("INTERNAL_SERVER_ERROR", message, 500);
+    }
+}

@@ -13,6 +13,8 @@ export const TypeServices = Type.Union([
     Type.Literal("PHYSIOTHERAPY")
 ]);
 
+export type TypeServicesType = Static<typeof TypeServices>;
+
 export const CreateProviderBody = Type.Object({
     companyName: Type.String({ minLength: 10, maxLength: 200 }),
     description: Type.String({ maxLength: 200 }),
@@ -48,3 +50,18 @@ export const ProviderResponseBody = Type.Object({
     phoneBusiness: Type.String(),
     updatedAt: Type.String({ format: "date-time" }),
 });
+
+export const ProviderPublicResponseSchema = Type.Object({
+    id: Type.Integer(),
+    ownerPhoto: Type.Optional(Type.String()),
+    ownerName: Type.String(), // Nome proprietario
+    storeName: Type.String(), // Nome do estabelecimento
+    description: Type.String(),
+    typeService: TypeServices,
+    instagram: Type.Optional(Type.String()),
+    emailBusiness: Type.String(),
+    phoneBusiness: Type.String(),
+    createdAt: Type.String({ format: "date-time" })
+});
+
+export type ProviderPublicResponseType = Static<typeof ProviderPublicResponseSchema>;
