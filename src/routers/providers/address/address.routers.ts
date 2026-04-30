@@ -15,6 +15,8 @@ export function addressRoutersProvider(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             body: CreateAddressProvider,
             response: {
                 201: Type.Object({
@@ -22,7 +24,7 @@ export function addressRoutersProvider(app: FastifyInstance) {
                 })
             }
         }
-    }, createAddressController());
+    }, createAddressController);
 
     app.get("/", {
         preHandler: [
@@ -30,11 +32,13 @@ export function addressRoutersProvider(app: FastifyInstance) {
             app.requireRole("PROVIDER")
         ],
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             response: {
                 200: ResponseAddressProvider
             }
         }
-    }, getAddressController());
+    }, getAddressController);
 
     app.put("/", {
         preHandler: [
@@ -43,6 +47,8 @@ export function addressRoutersProvider(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             body: UpdateAddressProvider,
             response: {
                 200: Type.Object({
@@ -50,7 +56,7 @@ export function addressRoutersProvider(app: FastifyInstance) {
                 })
             }
         }
-    }, updateAddressController());
+    }, updateAddressController);
 
     app.delete("/", {
         preHandler: [
@@ -59,11 +65,13 @@ export function addressRoutersProvider(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             response: {
                 200: Type.Object({
                     message: Type.String()
                 })
             }
         }
-    }, deleteAddressController());
+    }, deleteAddressController);
 }

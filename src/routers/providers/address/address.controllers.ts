@@ -64,7 +64,7 @@ export const deleteAddressController = () =>
     }
 
 
-function mapAddress(a: any): ResponseAddressProviderType {
+export function mapAddress(a: any): ResponseAddressProviderType {
     return {
         id: a.id,
         city: a.cidade,

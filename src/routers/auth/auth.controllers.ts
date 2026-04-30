@@ -32,7 +32,7 @@ export const registerControllerUser = (app: FastifyInstance) =>
             user = mapUserProvider(result!, result!.prestador!);
         } else {
             console.log("[AUTH] query do recurso da rota não aceita !");
-            throw new UnprocessableEntityError("Query invalida !");
+            throw new UnprocessableEntityError("INVALID_QUERY", "Query invalida !");
         }
 
         // Assinar Access e Refresh Token
@@ -89,7 +89,7 @@ export const logoutControllerUser = (app: FastifyInstance) =>
 
         // Validação se o Token foi fornecido
         if (!headerRefresh) {
-            UnauthorizedError("Refresh Token não fornecido do Header !");
+            throw new UnauthorizedError("UNAUTHORIZED","Refresh Token não fornecido do Header !");
         }
 
         // Desfaz a assinatura do Token
@@ -156,7 +156,7 @@ export const updatePasswordControllerUser = () =>
         })
     }
 
-function mapUser(user: any): UserResponseType {
+export function mapUser(user: any): UserResponseType {
     return {
         id: user.id,
         name: user.nome,
@@ -167,7 +167,7 @@ function mapUser(user: any): UserResponseType {
     }
 }
 
-function mapUserProvider(user: any, prov: any): UserResponseType {
+export function mapUserProvider(user: any, prov: any): UserResponseType {
     return {
         ...mapUser(user),
         provider: {

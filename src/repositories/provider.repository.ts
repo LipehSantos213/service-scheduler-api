@@ -1,7 +1,7 @@
-import { Agendamento, Disponibilidade, Endereco, Prestador, Servico, Usuario } from "@prisma/client";
+import { Agendamento, Disponibilidade, Endereco, Prestador, Servico, StatusAgendamento, Usuario } from "@prisma/client";
 import { prisma } from "../database/prisma";
 import { InternalServerError } from "../errors/http.errors";
-import { CreateServiceType } from "../schemas/services.schema";
+import { CreateServiceType, UpdateServiceType } from "../schemas/services.schema";
 import { CreateAvailabilityType, UpdateAvailabilityType } from "../schemas/availability.schema";
 import { CreateAddressProviderType, UpdateAddressProviderType } from "../schemas/address.schema";
 
@@ -38,9 +38,7 @@ export class ProviderRepository {
                 where: { instagram: instagram }
             });
         } catch (e) {
-            console.log("[REPOSITORY] Error ao buscar prestador pelo instagram");
-            console.log(`[ERROR] ${e}`);
-            throw new Error();
+            throw new InternalServerError("Error ao buscar prestador pelo instagram");
         }
 
     }
@@ -75,7 +73,7 @@ export class ProviderRepository {
         } catch (e) {
             console.log("[REPOSITORY] Error ao buscar prestador pelo email comercial");
             console.log(`[ERROR] ${e}`);
-            throw InternalServerError("Error ao buscar prestador pelo email comercial");
+            throw new InternalServerError("Error ao buscar prestador pelo email comercial");
         }
     }
 
@@ -178,7 +176,7 @@ export class ProviderRepository {
             await prisma.disponibilidade.updateMany({
                 where: {
                     prestadorId: providerId,
-                    id:idAvailability
+                    id: idAvailability
                 },
                 data: {
                     horaInicio: data.startTime,
@@ -207,30 +205,11 @@ export class ProviderRepository {
     }
 
     /**
-     * Busca todos os agendamentos marcados em uma data
-     * @param providerId Id do usuario na tabela Prestador
-     * @param date Data do agendamento a ser buscado
-     * @returns Lista de agendamento nesse dia
-     */
-    async getAppointmentsWithDate(providerId: number, date: Date): Promise<Agendamento[]> {
-        try {
-            return await prisma.agendamento.findMany({
-                where: {
-                    prestadorId: providerId,
-                    data: date
-                }
-            })
-        } catch (e) {
-            throw new InternalServerError("Error ao buscar Agendamentos");
-        }
-    }
-
-    /**
      * Busca todos os agendamento do Prestador
      * @param providerId Id do usuario na tabela Prestador
      * @returns Todos os agendamento do Prestador com os clientes
      */
-    async getAllAppointmentsOfProvider(providerId: number): Promise<({ cliente: Usuario } & Agendamento)[]> {
+    async getAllAppointmentsOfProvider(providerId: number) {
         try {
             return await prisma.agendamento.findMany({
                 where: {
@@ -241,7 +220,10 @@ export class ProviderRepository {
                     }
                 },
                 include: {
-                    cliente: true
+                    cliente: true,
+                    endereco: true,
+                    disponibilidade: true,
+                    servico: true
                 }
             })
         } catch (e) {
@@ -250,55 +232,101 @@ export class ProviderRepository {
     }
 
     /**
-     * Busca os dados do cliente que agentou um horario
+     * 
+     * @param id Id do agendamento
      * @param providerId Id do usuario na tabela Prestador
-     * @param appointmentId Id do Agendamento
-     * @returns Os dados do Cliente
+     * @returns Os dados do agendamento
      */
-    async getClientOfAppointment(providerId: number, appointmentId: number): Promise<{ cliente: Usuario } | null> {
+    async getAppointmentsById(id: number, providerId: number) {
         try {
             return await prisma.agendamento.findUnique({
                 where: {
-                    prestadorId: providerId,
-                    id: appointmentId
+                    id,
+                    prestadorId: providerId
                 },
-                select: {
-                    cliente: true
+                include: {
+                    cliente: true,
+                    servico: true,
+                    disponibilidade: true,
+                    endereco: true
                 }
-            })
+            });
         } catch (e) {
-            throw new InternalServerError("Error ao buscar cliente do agendamento")
+            throw new InternalServerError("Error ao buscar agendamento !");
         }
     }
 
     /**
-     * Criar um Serviço do Prestador
-     * @param providerId Id do usuario na tabela Prestador
-     * @param data Dados para a criação do Serviço
+     * Atualizar o status do agendamento
+     * @param id Id do agendamento
+     * @param status Status a ser atualizado
      */
-    async createServiceOfProvider(providerId: number, data: CreateServiceType): Promise<void> {
+    async updateStatusAppointment(id: number, status: StatusAgendamento): Promise<void> {
+        await prisma.agendamento.updateMany({
+            where: {
+                id
+            },
+            data: {
+                status: status
+            }
+        })
+    }
+
+    /**
+     * Buscar todos os agendamento pelo status
+     * @param providerId Id do usuario na tabela Prestador
+     * @param status Status do agendamento
+     * @returns Todos os agendamento com o status igual
+     */
+    async getAppointmentsWithStatus(providerId: number, status: StatusAgendamento) {
+        return await prisma.agendamento.findMany({
+            where: {
+                prestadorId: providerId,
+                status
+            },
+            include: {
+                cliente: true,
+                servico: true,
+                disponibilidade: true,
+                endereco: true
+            }
+        });
+    }
+
+    /**
+     * Buscar serviço pelo Id
+     * @param id Id do Serviço
+     */
+    async getServiceById(id: number): Promise<Servico | null> {
         try {
-            await prisma.servico.create({
-                data: {
-                    prestadorId: providerId,
-                    nome: data.nameService.trim(),
-                    descricao: data.description.trim(),
-                    duracao: data.duration.toString(),
-                    preco: data.prince,
+            return await prisma.servico.findUnique({
+                where: {
+                    id: id
                 }
-            })
+            });
         } catch (e) {
-            throw new InternalServerError("Error ao criar serviço do Prestador !");
+            throw new InternalServerError("Error ao buscar serviço !");
         }
     }
 
     /**
-     * Buscar serviço pelo nome
+     * Busca todos os serviços de um prestador
      * @param providerId Id do usuario na tabela Prestador
-     * @param name Nome do serviço a ser buscado
-     * @returns Os dados do serviço
      */
-    async getServiceByName(providerId: number, name: string): Promise<Servico | null> {
+    async getServicesOfProvider(providerId: number): Promise<Servico[] | null> {
+        return await prisma.servico.findMany({
+            where: {
+                prestadorId: providerId
+            }
+        });
+    }
+
+    /**
+     * Buscar serviço do prestador pelo nome
+     * @param providerId Id do usuario na tabela Prestador
+     * @param name Nome do serviço
+     */
+    async getServiceOfProviderByName(providerId: number, name: string): Promise<Servico | null> {
         return await prisma.servico.findFirst({
             where: {
                 prestadorId: providerId,
@@ -308,14 +336,78 @@ export class ProviderRepository {
     }
 
     /**
+     * Criar um serviço do prestador
+     * @param providerId Id do usuario na tabela Prestador
+     * @param data Dados para a criação do Serviço
+     */
+    async registerServiceOfProvider(providerId: number, data: CreateServiceType): Promise<void> {
+        await prisma.servico.create({
+            data: {
+                prestadorId: providerId,
+                nome: data.nameService,
+                descricao: data.description,
+                duracao: data.duration,
+                preco: data.price,
+            }
+        })
+    }
+
+    /**
+     * Atualizar dados do serviço do prestador
+     * @param id Id do serviço (Verificar se esse serviço é do Prestador)
+     * @param data Dados para atualizar o Serviço
+     */
+    async updateServiceOfProvider(id: number, data: UpdateServiceType): Promise<void> {
+        await prisma.servico.updateMany({
+            where: {
+                id: id,
+            },
+            data: {
+                nome: data.nameService,
+                descricao: data.description,
+                duracao: data.duration,
+                preco: data.price
+            }
+        })
+    }
+
+    /**
+     * Deletar um serviço do prestador
+     * @param id Id do serviço (Verificar se esse serviço é do Prestador)
+     */
+    async deleteServiceOfProvider(id: number): Promise<void> {
+        await prisma.servico.delete({
+            where: {
+                id
+            }
+        });
+    }
+
+    /**
+     * Atualizar os status do serviço (ativo ou desativado)
+     * @param id Id do serviço
+     * @param status Valor booleando para ativar ou desativar esse serviço
+     */
+    async updateStatusOfService(id: number, status: boolean): Promise<void> {
+        await prisma.servico.updateMany({
+            where: {
+                id
+            },
+            data: {
+                ativo: status
+            }
+        })
+    }
+
+    /**
      * Buscar Endereço do prestador
      * @param providerId Id do usuario na tabela Prestador
      * @returns Dados do endereço
      */
-    async getAddressOfProvider(providerId:number):Promise<Endereco | null>{
+    async getAddressOfProvider(providerId: number): Promise<Endereco | null> {
         return await prisma.endereco.findFirst({
-            where:{
-                prestadorId:providerId
+            where: {
+                prestadorId: providerId
             }
         });
     }
@@ -325,10 +417,10 @@ export class ProviderRepository {
      * @param providerId Id do usuario na tabela Prestador
      * @param data Dados da criação do Endereço
      */
-    async createAddress(providerId:number, data:CreateAddressProviderType):Promise<void>{
+    async createAddress(providerId: number, data: CreateAddressProviderType): Promise<void> {
         await prisma.endereco.create({
-            data:{
-                prestadorId:providerId,
+            data: {
+                prestadorId: providerId,
                 bairro: data.neighborhood,
                 cep: data.cep,
                 cidade: data.city,
@@ -345,10 +437,10 @@ export class ProviderRepository {
      * @param providerId Id do usuario na tabela 
      * @param data Dados para atualizar 
      */
-    async toUpdateAddress(providerId:number, data:UpdateAddressProviderType):Promise<void>{
+    async toUpdateAddress(providerId: number, data: UpdateAddressProviderType): Promise<void> {
         await prisma.endereco.updateMany({
-            where:{prestadorId:providerId},
-            data:{
+            where: { prestadorId: providerId },
+            data: {
                 bairro: data.neighborhood,
                 cep: data.cep,
                 cidade: data.city,
@@ -364,10 +456,10 @@ export class ProviderRepository {
      * Deletar endereço do prestador
      * @param providerId Id do prestador na tabela Prestador
      */
-    async toDeleteAddress(providerId:number):Promise<void>{
+    async toDeleteAddress(providerId: number): Promise<void> {
         await prisma.endereco.delete({
-            where:{
-                prestadorId:providerId
+            where: {
+                prestadorId: providerId
             }
         });
     }

@@ -12,7 +12,7 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
         properties: {
             dayAvailability: {
                 type: "integer",
-                min: 1
+                minimum: 1
             }
         },
         required: ["dayAvailability"]
@@ -27,6 +27,8 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             body: CreateAvailabilityBody,
             response: {
                 201: Type.Object({
@@ -34,7 +36,7 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
                 })
             }
         }
-    }, registerNewAvailability());
+    }, registerNewAvailability);
 
     app.get("/:dayAvailability", {
         preHandler: [
@@ -43,12 +45,16 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             params: ParamPath,
             response: {
-                200: ResponseAvailabilityBody
+                200: Type.Array(
+                    ResponseAvailabilityBody
+                )
             }
         }
-    }, getAvailability());
+    }, getAvailability);
 
     app.get("/", {
         preHandler: [
@@ -57,19 +63,26 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             response: {
                 200: ResponseAllAvailability
             }
         }
-    }, getAllAvailability());
+    }, getAllAvailability);
 
-    app.put("/", {
+    app.put("/:idAvailability", {
         preHandler: [
             app.getCurrentUser,
             app.requireRole("PROVIDER")
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
+            params: Type.Object({
+                idAvailability: Type.Integer({ minimum: 1 })
+            }),
             body: UpdateAvailabilityBody,
             response: {
                 200: Type.Object({
@@ -77,7 +90,7 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
                 })
             }
         }
-    }, updateAvailability());
+    }, updateAvailability);
 
     app.delete("/:idAvailability", {
         preHandler: [
@@ -86,12 +99,14 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
         ],
 
         schema: {
+            security: [{ bearerAuth: [] }],
+            tags: [tag],
             params: {
                 type: "object",
                 properties: {
                     idAvailability: {
                         type: "integer",
-                        min: 1
+                        minimum: 1
                     }
                 },
                 required: ["idAvailability"]
@@ -102,5 +117,5 @@ export async function dispositionRoutersProviders(app: FastifyInstance) {
                 })
             }
         }
-    }, deleteAvailability());
+    }, deleteAvailability);
 }

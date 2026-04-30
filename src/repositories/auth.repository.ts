@@ -6,8 +6,6 @@ import { UserCreateType, UserUpdateProfileType } from "../schemas/user.schema";
 
 
 export class AuthRepository {
-
-
     /**
      * Buscar Usuario pelo ID
      * @param userId Id do Usuario
@@ -66,7 +64,7 @@ export class AuthRepository {
             });
         } catch (e) {
             console.log(`[ERROR] Error na criação do CUSTOMER: ${e}`);
-            throw new Error();
+            throw new InternalServerError("Error ao criar cliente");
         }
 
     }
@@ -110,7 +108,7 @@ export class AuthRepository {
             });
         } catch (e) {
             console.log(`[ERROR] Error na criação do PROVIDER: ${e}`);
-            throw new Error();
+            throw new InternalServerError("Error ao criar prestador");
         }
 
     }

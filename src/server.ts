@@ -1,6 +1,6 @@
 
-import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
-// import "dotenv/config";
+import Fastify from "fastify";
+import "dotenv/config";
 import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
@@ -10,6 +10,12 @@ import { authPlugin } from "./plugins/auth";
 import { authRouters } from "./routers/auth/auth.routers";
 import { addressRoutersProvider } from "./routers/providers/address/address.routers";
 import { dispositionRoutersProviders } from "./routers/providers/disposition/disposition.routers";
+import { AppError } from "./errors/http.errors";
+import { serviceRoutersProvider } from "./routers/providers/service/service.routers";
+
+import swagger from "@fastify/swagger";
+import swaggerUI from "@fastify/swagger-ui";
+import { schedulingRoutersProviders } from "./routers/providers/scheduling/scheduling.routers";
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -44,24 +50,43 @@ async function startServer() {
         secret: SECRET_KEY || "key",
     });
 
+    await fastify.register(swagger, {
+        openapi: {
+            info: {
+                title: "API Devs",
+                description: "Documentação da API",
+                version: "1.0.0"
+            },
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "JWT"
+                    }
+                }
+            }
+        }
+    });
+
+    await fastify.register(swaggerUI, {
+        routePrefix: "/docs"
+    })
+
     await fastify.register(authPlugin);
 
-    fastify.setErrorHandler((error: FastifyError, req: FastifyRequest, reply: FastifyReply) => {
-        if (error.statusCode) {
-            const mensagem = error.message.trim();
+    fastify.setErrorHandler((error, _request, reply) => {
+        if (error instanceof AppError) {
             return reply.status(error.statusCode).send({
                 statusCode: error.statusCode,
-                error: error.code,
-                message: mensagem,
+                error: error.error,
+                message: error.message
             });
         }
 
-        console.log("[ERROR] error inesperado ocorreu. Local capturado: server.ts");
-
+        // erro inesperado
         return reply.status(500).send({
-            statusCode: 500,
-            error: "INTERNAL_SERVER_ERROR",
-            message: "Error interno do servidor",
+            error: "Internal Server Error",
         });
     });
 
@@ -72,17 +97,25 @@ async function startServer() {
     });
 
     // ================== Registro das Rotas ==================
-    fastify.register(authRouters, {
+    await fastify.register(authRouters, {
         prefix: "api/v1/auth"
     });
 
 
-    fastify.register(addressRoutersProvider, {
+    await fastify.register(addressRoutersProvider, {
         prefix: "api/v1/providers/address"
     });
 
-    fastify.register(dispositionRoutersProviders, {
+    await fastify.register(dispositionRoutersProviders, {
         prefix: "api/v1/providers/disposition"
+    });
+
+    await fastify.register(serviceRoutersProvider, {
+        prefix: "api/v1/providers/services"
+    });
+
+    await fastify.register(schedulingRoutersProviders, {
+        prefix: "api/v1/providers/scheduling"
     });
 
     // ================== Fim do Registro ==================
